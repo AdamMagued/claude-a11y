@@ -200,6 +200,10 @@
     var label = el.getAttribute("aria-label");
     if (label && /code block/i.test(label)) return true;
     if (el.getAttribute("role") === "region" && label && /response/i.test(label)) return true;
+    if (el.getAttribute("role") === "table" && label) return true;
+    if (el.getAttribute("role") === "presentation" || el.getAttribute("role") === "none") return true;
+    if (el.tagName === "BLOCKQUOTE" && el.getAttribute("role") === "note" && label) return true;
+    if ((el.tagName === "UL" || el.tagName === "OL") && el.getAttribute("role") === "list" && label) return true;
     return false;
   }
 
@@ -221,7 +225,7 @@
       var code = pre.querySelector("code");
       var lang = config.codeBlockDefault;
 
-      if (code) {
+      if (code && typeof code.className === "string") {
         var match = code.className.match(/language-(\w+)/);
         if (match) {
           lang = match[1].charAt(0).toUpperCase() + match[1].slice(1);
@@ -280,6 +284,7 @@
     for (var i = 0; i < tables.length; i++) {
       var table = tables[i];
       if (table.dataset.ca11y) continue;
+      if (hasUpstreamA11y(table)) { table.dataset.ca11y = "1"; continue; }
       table.dataset.ca11y = "1";
       transformCount++;
 
@@ -294,8 +299,10 @@
       try {
         var annText = tpl(config.tableStart, { rows: rows.length, cols: cols });
         table.setAttribute("aria-label", "Table, " + cols + " columns");
-        var ann = createSrSpan(annText, "note");
-        table.parentNode.insertBefore(ann, table);
+        if (table.parentNode) {
+          var ann = createSrSpan(annText, "note");
+          table.parentNode.insertBefore(ann, table);
+        }
 
         var headerRow = table.querySelector("thead tr, tr:first-child");
         var headerCells = headerRow ? Array.prototype.slice.call(headerRow.children) : [];
@@ -306,8 +313,10 @@
           ths[j].setAttribute("scope", isInHeaderRow ? "col" : "row");
         }
 
-        var endAnn = createSrSpan(config.tableEnd, "note");
-        table.parentNode.insertBefore(endAnn, table.nextSibling);
+        if (table.parentNode) {
+          var endAnn = createSrSpan(config.tableEnd, "note");
+          table.parentNode.insertBefore(endAnn, table.nextSibling);
+        }
       } catch (e) {
         console.warn(LOG_PREFIX, "Table transform error:", e.message);
       }
@@ -319,6 +328,7 @@
     for (var i = 0; i < bqs.length; i++) {
       var bq = bqs[i];
       if (bq.dataset.ca11y) continue;
+      if (hasUpstreamA11y(bq)) { bq.dataset.ca11y = "1"; continue; }
       bq.dataset.ca11y = "1";
       transformCount++;
 
@@ -376,6 +386,7 @@
     for (var i = 0; i < lists.length; i++) {
       var list = lists[i];
       if (list.dataset.ca11y) continue;
+      if (hasUpstreamA11y(list)) { list.dataset.ca11y = "1"; continue; }
       list.dataset.ca11y = "1";
       transformCount++;
 
@@ -388,8 +399,10 @@
 
       try {
         var annText = tpl(config.listAnnouncement, { count: items.length, type: type });
-        var ann = createSrSpan(annText, "note");
-        list.parentNode.insertBefore(ann, list);
+        if (list.parentNode) {
+          var ann = createSrSpan(annText, "note");
+          list.parentNode.insertBefore(ann, list);
+        }
       } catch (e) {
         console.warn(LOG_PREFIX, "List transform error:", e.message);
       }
